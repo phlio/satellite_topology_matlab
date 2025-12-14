@@ -1,4 +1,4 @@
-function [satelliteData, satelliteNames] = read_stk_data(filename, total_sats)
+function [satelliteData, satelliteNames] = read_stk_data(filename)
 % 基于已验证成功的CSV读取逻辑读取STK数据
 % 输入: filename-CSV文件名, total_sats-总卫星数
 % 输出: satelliteData-卫星数据结构, satelliteNames-卫星名称列表
@@ -17,7 +17,7 @@ function [satelliteData, satelliteNames] = read_stk_data(filename, total_sats)
         while ~feof(fid)
             line = fgetl(fid);
             if ischar(line)
-                lines{end+1} = line;
+                lines{end+1} = line;% lines获取每行的数据，“，”分隔开，包括空行
             end
         end
         fclose(fid);
@@ -39,7 +39,7 @@ function [satelliteData, satelliteNames] = read_stk_data(filename, total_sats)
     satelliteCount = 0;
 
     % 寻找所有包含"Satellite"的行作为卫星数据标识
-    satelliteIndices = find(contains(lines, 'Satellite'));
+    satelliteIndices = find(contains(lines, 'Satellite'));% satelliteIndices每个卫星数据的表头的列数
     fprintf('找到 %d 个卫星标识\n', length(satelliteIndices));
 
     if isempty(satelliteIndices)
@@ -66,7 +66,7 @@ function [satelliteData, satelliteNames] = read_stk_data(filename, total_sats)
         % 确定数据块范围
         if i < length(satelliteIndices)
             nextHeaderIdx = satelliteIndices(i+1);
-            dataLines = lines(headerIdx+1:nextHeaderIdx-1);
+            dataLines = lines(headerIdx+1:nextHeaderIdx-1);% dataLines从lines中截取每个卫星的数据
         else
             dataLines = lines(headerIdx+1:end);
         end
