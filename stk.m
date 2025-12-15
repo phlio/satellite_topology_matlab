@@ -6,7 +6,7 @@ filename = 'location.csv';
 T = 60; P = 6; S = 10; U = 5;
 h = 1000; Re = 6371.393; H_atm = 100;
 
-fprintf('=== STK Walker星座拓扑分析（修复版） ===\n');
+fprintf('=== STK Walker星座拓扑分析 ===\n');
 fprintf('星座参数: %d/%d/%d, 高度=%dkm\n', T, P, S, h);
 
 %% 1. 读取STK位置数据
@@ -36,7 +36,8 @@ topology_variability = zeros(num_time_points, 1);
 topology_sequence = cell(num_time_points, 1);
 
 % 只分析前几个时间点以加快速度（可修改为完整分析）
-max_time_points = min(10, num_time_points); % 限制分析的时间点数量
+% max_time_points = min(10, num_time_points); % 限制分析的时间点数量
+max_time_points = num_time_points;
 
 for t_idx = 1:max_time_points
     fprintf('   分析时间点 %d/%d...\n', t_idx, max_time_points);

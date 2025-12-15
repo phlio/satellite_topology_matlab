@@ -1,5 +1,5 @@
 function plotSatelliteTopology(graph_matrix)
-    % plotSatelliteTopology - 60颗卫星拓扑图（第一/六轨弧线+样式区分，MATLAB 2021a兼容）
+    % plotSatelliteTopology - 60颗卫星拓扑图
     % 输入：graph_matrix - 60x60 double矩阵，0=无连接，1=有连接
     % 特性：1-6轨链路→上凸弧线+虚线；其他链路→直线+实线
 
@@ -38,13 +38,14 @@ function plotSatelliteTopology(graph_matrix)
     end
 
     % 2. 绘制链路（核心：区分1-6轨弧线+虚线，其他直线+实线）
-    link_color = [0.6 0.6 0.6]; % 链路基础灰色
     for i = 1:node_count
         for j = i+1:node_count  % 仅画i<j避免重复
             if graph_matrix(i, j) == 1
                 % 获取两个节点的轨道号
                 orbit_i = ceil(i / sat_per_orbit);
                 orbit_j = ceil(j / sat_per_orbit);
+                sat_idx_i = mod(i-1, sat_per_orbit) + 1; % 节点i轨内序号
+                sat_idx_j = mod(j-1, sat_per_orbit) + 1; % 节点j轨内序号
                 % 获取节点坐标
                 x1 = x_coords(i); y1 = y_coords(i);
                 x2 = x_coords(j); y2 = y_coords(j);
@@ -52,20 +53,44 @@ function plotSatelliteTopology(graph_matrix)
                 % 情况1：第一轨↔第六轨 → 弧线+虚线
                 if (orbit_i==1 && orbit_j==6) || (orbit_i==6 && orbit_j==1)
                     % 生成上凸弧线的参数点（避免与中间轨道重叠）
-                    arc_num = 50; % 弧线采样点数（越多越平滑）
-                    t = linspace(0, pi/2, arc_num); % 弧度参数
-                    % 弧线中点偏移（上凸）
-                    mid_x = (x1 + x2)/2;
-                    mid_y = (y1 + y2)/2 + 2; % 上凸2个单位，适配图表尺寸
-                    % 生成弧线坐标
-                    arc_x = mid_x + (x2 - mid_x)*cos(t) - (mid_y - y1)*sin(t);
-                    arc_y = mid_y - (mid_y - y1)*cos(t) - (x2 - mid_x)*sin(t);
-                    % 绘制弧线（虚线）
-                    plot(arc_x, arc_y, '--', 'Color', link_color, 'LineWidth', 0.8);
+                    arc_num = 60; % 弧线采样点数（越多越平滑）
+                    h = -1; % 上凸高度（可自定义，比如2、3等）
 
-                % 情况2：其他链路 → 直线+实线
+                    % 1. 计算贝塞尔曲线控制点（决定上凸位置）
+                    mid_x0 = (x1 + x2)/2;  % 两点连线的水平中点
+                    mid_y0 = (y1 + y2)/2;  % 两点连线的垂直中点
+                    P0 = [x1, y1];         % 起点（贝塞尔曲线第一个控制点）
+                    P1 = [mid_x0, mid_y0 + h];  % 上凸控制点（核心：向上偏移h）
+                    P2 = [x2, y2];         % 终点（贝塞尔曲线第三个控制点）
+                    % 2. 生成贝塞尔曲线参数t（0到1，等间距）
+                    t = linspace(0, 1, arc_num);  
+                    % 3. 计算贝塞尔曲线坐标（保证起点/终点精准连接）
+                    arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
+                    arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
+                    % 绘制弧线（虚线）
+                    plot(arc_x, arc_y, '--', 'Color', [0 1 0], 'LineWidth', 0.8);
+                   
+                % 情况2：同轨道内首尾卫星（1号↔10号）→ 竖直下凸弧线+虚线
+                elseif (orbit_i == orbit_j) && ((sat_idx_i==1 && sat_idx_j==10) || (sat_idx_i==10 && sat_idx_j==1))
+                    arc_num = 60; % 弧线采样点数（越多越平滑）
+                    h = 0.5; % 上凸高度（可自定义，比如2、3等）
+                    % 1. 计算贝塞尔曲线控制点（决定上凸位置）
+                    mid_x0 = (x1 + x2)/2;  % 两点连线的水平中点
+                    mid_y0 = (y1 + y2)/2;  % 两点连线的垂直中点
+                    P0 = [x1, y1];         % 起点（贝塞尔曲线第一个控制点）
+                    P1 = [mid_x0 + h, mid_y0];  % 上凸控制点（核心：向上偏移h）
+                    P2 = [x2, y2];         % 终点（贝塞尔曲线第三个控制点）
+                    % 2. 生成贝塞尔曲线参数t（0到1，等间距）
+                    t = linspace(0, 1, arc_num);  
+                    % 3. 计算贝塞尔曲线坐标（保证起点/终点精准连接）
+                    arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
+                    arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
+                    % 4. 绘制弧线（虚线，颜色/线宽可自定义）
+                    plot(arc_x, arc_y, '--', 'Color', [0 0 1], 'LineWidth', 0.8);
+                    
+                % 情况3：其他链路 → 直线+实线
                 else
-                    plot([x1, x2], [y1, y2], '-', 'Color', link_color, 'LineWidth', 0.8);
+                    plot([x1, x2], [y1, y2], '-', 'Color', '#000000', 'LineWidth', 0.8);
                 end
             end
         end
