@@ -99,7 +99,7 @@ function plotSatelliteTopology(graph_matrix)
     %% 图表美化
     xlabel('轨道编号', 'FontSize', 10);
     ylabel('轨道内卫星编号', 'FontSize', 10);
-    title('卫星星座拓扑连接图（1/6轨弧线连接）', 'FontSize', 12);
+    title('卫星星座拓扑连接图', 'FontSize', 12);
     xticks(1:orbit_count);
     xticklabels({'1轨道','2轨道','3轨道','4轨道','5轨道','6轨道'});
     yticks(1:sat_per_orbit);

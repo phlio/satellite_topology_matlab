@@ -1,4 +1,4 @@
-%% STK Walker星座拓扑分析（完整修复版）
+%% STK Walker星座拓扑分析
 clear; clc; close all;
 
 %% 参数设置
@@ -39,6 +39,8 @@ topology_sequence = cell(num_time_points, 1);
 % max_time_points = min(10, num_time_points); % 限制分析的时间点数量
 max_time_points = num_time_points;
 
+prev_graph = [];
+
 for t_idx = 1:max_time_points
     fprintf('   分析时间点 %d/%d...\n', t_idx, max_time_points);
     
@@ -49,7 +51,11 @@ for t_idx = 1:max_time_points
     % 基于几何位置构建拓扑
     graph_matrix = build_geometry_based_topology(current_positions, sat_mapping, T, P, S, h, Re, H_atm);
     topology_sequence{t_idx} = graph_matrix;
-%     plotSatelliteTopology(graph_matrix);
+
+    if ~isequal(graph_matrix, prev_graph) % 矩阵内容不同 → 触发绘图
+        plotSatelliteTopology(graph_matrix);% 画卫星星座拓扑图
+        prev_graph = graph_matrix; % 更新历史矩阵为当前矩阵
+    end
     
     % 计算拓扑变化率
     if t_idx > 1

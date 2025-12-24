@@ -9,10 +9,6 @@ function graph_matrix = build_geometry_based_topology(positions, mapping, T, P, 
     max_link_distance = calculate_max_link_distance(h, Re, H_atm);
     fprintf('      最大建链距离: %.2f km\n', max_link_distance);
     
-    % 提取位置坐标
-    x = positions(:, 1);
-    y = positions(:, 2);
-    z = positions(:, 3);
     
     %% 1. 同轨链路构建
     fprintf('      构建同轨链路...\n');
