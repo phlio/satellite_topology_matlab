@@ -4,6 +4,7 @@ clear; clc; close all;
 %% 参数设置
 filename = 'location.csv';
 T = 60; P = 6; S = 10; U = 5;
+% T = 100; P = 10; S = 10; 
 h = 1000; Re = 6371.393; H_atm = 100;
 
 fprintf('=== STK Walker星座拓扑分析 ===\n');
@@ -36,8 +37,8 @@ topology_variability = zeros(num_time_points, 1);
 topology_sequence = cell(num_time_points, 1);
 
 % 只分析前几个时间点以加快速度（可修改为完整分析）
-% max_time_points = min(10, num_time_points); % 限制分析的时间点数量
-max_time_points = num_time_points;
+max_time_points = min(61, num_time_points); % 限制分析的时间点数量
+% max_time_points = num_time_points;
 
 prev_graph = [];
 
@@ -53,7 +54,7 @@ for t_idx = 1:max_time_points
     topology_sequence{t_idx} = graph_matrix;
 
     if ~isequal(graph_matrix, prev_graph) % 矩阵内容不同 → 触发绘图
-        plotSatelliteTopology(graph_matrix);% 画卫星星座拓扑图
+        plotSatelliteTopology(graph_matrix, T, P, S);% 画卫星星座拓扑图
         prev_graph = graph_matrix; % 更新历史矩阵为当前矩阵
     end
     

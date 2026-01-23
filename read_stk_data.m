@@ -86,7 +86,8 @@ function [satelliteData, satelliteNames] = read_stk_data(filename)
         
         if success && ~isempty(time)
             satelliteCount = satelliteCount + 1;
-            fieldName = sprintf('Sat%03d', str2double(satNumber));
+%             fieldName = sprintf('Sat%d', str2double(satNumber));
+            fieldName = sprintf('Sat%s', satNumber);
             
             % 存储数据
             satelliteData.(fieldName).time = time;

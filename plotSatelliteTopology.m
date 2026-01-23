@@ -1,13 +1,9 @@
-function plotSatelliteTopology(graph_matrix)
+function plotSatelliteTopology(graph_matrix,node_count,orbit_count,sat_per_orbit)
     % plotSatelliteTopology - 60颗卫星拓扑图
     % 输入：graph_matrix - 60x60 double矩阵，0=无连接，1=有连接
     % 特性：1-6轨链路→上凸弧线+虚线；其他链路→直线+实线
 
 
-    %% 星座基础参数
-    orbit_count = 6;       % 轨道数
-    sat_per_orbit = 10;    % 每轨卫星数
-    node_count = 60;       % 总卫星数
 
     %% 计算卫星坐标+编号
     x_coords = zeros(node_count, 1);  % 轨道x坐标（1-6）
@@ -51,7 +47,7 @@ function plotSatelliteTopology(graph_matrix)
                 x2 = x_coords(j); y2 = y_coords(j);
 
                 % 情况1：第一轨↔第六轨 → 弧线+虚线
-                if (orbit_i==1 && orbit_j==6) || (orbit_i==6 && orbit_j==1)
+                if (orbit_i==1 && orbit_j==orbit_count) || (orbit_i==orbit_count && orbit_j==1)
                     % 生成上凸弧线的参数点（避免与中间轨道重叠）
                     arc_num = 60; % 弧线采样点数（越多越平滑）
                     h = -1; % 上凸高度（可自定义，比如2、3等）
@@ -71,7 +67,7 @@ function plotSatelliteTopology(graph_matrix)
                     plot(arc_x, arc_y, '--', 'Color', [0 1 0], 'LineWidth', 0.8);
                    
                 % 情况2：同轨道内首尾卫星（1号↔10号）→ 竖直下凸弧线+虚线
-                elseif (orbit_i == orbit_j) && ((sat_idx_i==1 && sat_idx_j==10) || (sat_idx_i==10 && sat_idx_j==1))
+                elseif (orbit_i == orbit_j) && ((sat_idx_i==1 && sat_idx_j==sat_per_orbit) || (sat_idx_i==sat_per_orbit && sat_idx_j==1))
                     arc_num = 60; % 弧线采样点数（越多越平滑）
                     h = 0.5; % 上凸高度（可自定义，比如2、3等）
                     % 1. 计算贝塞尔曲线控制点（决定上凸位置）
@@ -101,7 +97,7 @@ function plotSatelliteTopology(graph_matrix)
     ylabel('轨道内卫星编号', 'FontSize', 10);
     title('卫星星座拓扑连接图', 'FontSize', 12);
     xticks(1:orbit_count);
-    xticklabels({'1轨道','2轨道','3轨道','4轨道','5轨道','6轨道'});
+%     xticklabels({'1轨道','2轨道','3轨道','4轨道','5轨道','6轨道'});
     yticks(1:sat_per_orbit);
     axis([0, orbit_count+1, 0, sat_per_orbit+1]); % 预留边缘空间
     hold off;
