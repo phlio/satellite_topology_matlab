@@ -8,5 +8,5 @@ function is_visible = check_visibility(pos1, pos2, Re)
     d_min = point_to_line_distance(earth_center, pos1, pos2);
     
     % 如果最小距离大于地球半径，则可见（考虑5%安全余量）
-    is_visible = (d_min > Re * 1.05);
+    is_visible = (d_min > Re);
 end

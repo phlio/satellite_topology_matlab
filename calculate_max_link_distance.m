@@ -1,4 +1,4 @@
-function max_distance = calculate_max_link_distance(h, Re, H_atm)
+function max_distance = calculate_max_link_distance(h, Re)
 % 计算最大建链距离
 % 输入: h-轨道高度, Re-地球半径, H_atm-大气层高度
 % 输出: max_distance-最大建链距离(km)

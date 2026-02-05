@@ -1,4 +1,4 @@
-function graph_matrix = build_geometry_based_topology(positions, mapping, T, P, S, h, Re, H_atm)
+function graph_matrix = build_geometry_based_topology(positions, mapping, T, P, S, h, Re)
 % 基于卫星几何位置构建拓扑
 % 修复了所有缺失的函数调用
 
@@ -11,7 +11,7 @@ function graph_matrix = build_geometry_based_topology(positions, mapping, T, P, 
     fprintf('      基于几何位置构建拓扑...\n');
     
     % 计算建链阈值距离
-    max_link_distance = calculate_max_link_distance(h, Re, H_atm);
+    max_link_distance = calculate_max_link_distance(h, Re);
     fprintf('      最大建链距离: %.2f km\n', max_link_distance);
     
     
