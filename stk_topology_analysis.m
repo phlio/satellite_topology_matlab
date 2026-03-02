@@ -1,0 +1,97 @@
+%% STK Walker星座拓扑分析（基于预处理数据）
+clear; clc; close all;
+
+%% 1. 加载预处理数据
+fprintf('=== STK Walker星座拓扑分析 ===\n');
+fprintf('1. 加载预处理数据...\n');
+
+if ~exist('processed_data.mat', 'file')
+    error('错误: processed_data.mat 文件不存在！请先运行 data_preprocessing.m');
+end
+
+% 直接加载所有变量
+load('processed_data.mat');
+
+fprintf('   成功加载预处理数据\n');
+fprintf('   星座参数: %d/%d/%d, 高度=%dkm, FOV=%.1f°, SEU概率=%.4f, 碎片概率=%.4f\n', T, P, S, h, fov_degrees, seu_probability, debris_probability);
+fprintf('   时间点数量: %d\n', num_time_points);
+
+%% 2. 基于几何位置的拓扑构建（仅构建基础拓扑，不应用环境效应）
+fprintf('2. 基于几何位置的拓扑构建...\n');
+
+% 存储每个时间点的基础拓扑（用于1000次模拟）
+base_topology_sequence = cell(num_time_points, 1);
+
+% 只分析前几个时间点以加快速度（可修改为完整分析）
+max_time_points = min(61, num_time_points); % 限制分析的时间点数量
+
+for t_idx = 1:max_time_points
+    fprintf('   构建时间点 %d/%d...%d 的基础拓扑\n', t_idx, max_time_points, time_data(t_idx));
+    
+    % 获取当前时间点的卫星位置
+    current_positions = sat_positions{t_idx};
+    
+    % 基于几何位置构建基础拓扑（不应用环境效应）
+    base_graph_matrix = build_geometry_based_topology(current_positions, sat_mapping, T, P, S, h, Re);
+    base_topology_sequence{t_idx} = base_graph_matrix;
+    
+    fprintf('   基础拓扑构建完成\n');
+    fprintf('=====================================================================\n');
+end
+
+%% 3. 1000次蒙特卡洛模拟计算平均指标
+fprintf('3. 执行1000次蒙特卡洛模拟计算平均指标...\n');
+
+% 初始化结果存储（1000次模拟的平均值）
+num_simulations = 1000;
+avg_hops_over_time_avg = zeros(max_time_points, 1);
+diameter_over_time_avg = zeros(max_time_points, 1);
+
+for t_idx = 1:max_time_points
+    fprintf('   处理时间点 %d/%d...%d\n', t_idx, max_time_points, time_data(t_idx));
+    
+    % 获取当前时间点的数据
+    current_positions = sat_positions{t_idx};
+    current_sat_lat_lon = sat_lat_lon{t_idx};
+    current_sun_vector = sunUnitVector(t_idx, :);
+    
+    % 获取基础拓扑
+    base_graph_matrix = base_topology_sequence{t_idx};
+    
+    % 初始化累计值
+    total_avg_hops = 0;
+    total_diameter = 0;
+    
+    % 执行1000次模拟
+    for sim_idx = 1:num_simulations
+        % 复制基础拓扑
+        graph_matrix = base_graph_matrix;
+        
+        % 应用空间环境效应
+        graph_matrix = apply_solar_radiation_effect(graph_matrix, current_positions, current_sun_vector, fov_degrees);
+        [graph_matrix, ~] = apply_single_event_upset_effect(graph_matrix, current_sat_lat_lon, seu_probability);
+        graph_matrix = apply_space_debris_effect(graph_matrix, debris_probability);
+        
+        % 计算网络性能指标
+        [avg_hops, diameter] = calculate_network_metrics(graph_matrix);
+        
+        % 累加结果
+        total_avg_hops = total_avg_hops + avg_hops;
+        total_diameter = total_diameter + diameter;
+    end
+    
+    % 计算平均值
+    avg_hops_over_time_avg(t_idx) = total_avg_hops / num_simulations;
+    diameter_over_time_avg(t_idx) = total_diameter / num_simulations;
+    
+    fprintf('   1000次模拟平均指标: 平均跳数=%.4f, 直径=%.2f\n', ...
+            avg_hops_over_time_avg(t_idx), diameter_over_time_avg(t_idx));
+    fprintf('=====================================================================\n');
+end
+
+%% 4. 结果可视化（使用1000次模拟的平均结果）
+fprintf('4. 结果可视化...\n');
+visualize_analysis_results_new_format(time_data(1:max_time_points), avg_hops_over_time_avg, ...
+                          diameter_over_time_avg);
+
+fprintf('\n分析完成！\n');
