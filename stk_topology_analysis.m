@@ -89,9 +89,13 @@ for t_idx = 1:max_time_points
     fprintf('=====================================================================\n');
 end
 
-%% 4. 结果可视化（使用1000次模拟的平均结果）
-fprintf('4. 结果可视化...\n');
+%% 4. 保存计算结果到 .mat 文件
+% save('simulation_results60u5.mat', 'time_data', 'avg_hops_over_time_avg', 'diameter_over_time_avg', 'num_time_points');
+
+%% 5. 结果可视化（使用1000次模拟的平均结果）
+
+fprintf('5. 结果可视化...\n');
 visualize_analysis_results_new_format(time_data(1:max_time_points), avg_hops_over_time_avg, ...
                           diameter_over_time_avg);
 
-fprintf('\n分析完成！\n');
+fprintf('\n分析完成！结果已保存到 simulation_results.mat\n');
