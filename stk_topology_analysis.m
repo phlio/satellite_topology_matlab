@@ -16,28 +16,45 @@ fprintf('   成功加载预处理数据\n');
 fprintf('   星座参数: %d/%d/%d, 高度=%dkm, FOV=%.1f°, SEU概率=%.4f, 碎片概率=%.4f\n', T, P, S, h, fov_degrees, seu_probability, debris_probability);
 fprintf('   时间点数量: %d\n', num_time_points);
 
-%% 2. 基于几何位置的拓扑构建（仅构建基础拓扑，不应用环境效应）
-fprintf('2. 基于几何位置的拓扑构建...\n');
-
-% 存储每个时间点的基础拓扑（用于1000次模拟）
-base_topology_sequence = cell(num_time_points, 1);
+%% 2. 基于几何位置的拓扑构建（使用全局公共可建链）
+fprintf('2. 基于几何位置的拓扑构建（全局公共可建链）...\n');
 
 % 只分析前几个时间点以加快速度（可修改为完整分析）
 max_time_points = min(61, num_time_points); % 限制分析的时间点数量
 
-for t_idx = 1:max_time_points
-    fprintf('   构建时间点 %d/%d...%d 的基础拓扑\n', t_idx, max_time_points, time_data(t_idx));
-    
-    % 获取当前时间点的卫星位置
-    current_positions = sat_positions{t_idx};
-    
-    % 基于几何位置构建基础拓扑（不应用环境效应）
-    base_graph_matrix = build_geometry_based_topology(current_positions, sat_mapping, T, P, S, h, Re);
-    base_topology_sequence{t_idx} = base_graph_matrix;
-    
-    fprintf('   基础拓扑构建完成\n');
-    fprintf('=====================================================================\n');
-end
+% 提取所有时间点的位置数据
+all_positions = sat_positions(1:max_time_points);
+all_mappings = repmat({sat_mapping}, max_time_points, 1);
+
+% 步骤1: 计算所有时间点的异轨可建链候选
+fprintf('   计算所有时间点的异轨可建链候选...\n');
+inter_orbit_candidates_all_times = calculate_inter_orbit_candidates_all_times(all_positions, all_mappings, T, P, S, h, Re);
+
+% 步骤2: 计算全局公共可建链（跨所有时间点和所有卫星的并集）
+fprintf('   计算全局公共可建链...\n');
+global_orbit_public_acs = calculate_global_orbit_public_acs(inter_orbit_candidates_all_times, S, P, max_time_points);
+
+% 步骤3: 生成按sum_mod索引的offset组合（基于全局公共可建链）
+fprintf('   生成按sum_mod索引的offset组合（全局）...\n');
+global_offset_combinations_indexed = generate_global_offset_combinations_indexed(global_orbit_public_acs, S, P);
+
+% 步骤4: 选择初始offset组合（保持与原代码一致的情况）
+target_U = S / 2;
+selected_global_offsets = select_initial_global_offsets(global_offset_combinations_indexed, target_U);
+% selected_global_offsets = global_offset_combinations_indexed{1}(1, :);%{S + 1}
+
+% 存储每个时间点的基础拓扑（所有时间点使用相同的拓扑结构）
+high_risk_satellites = [];
+current_time = 0;
+
+% 构建统一的基础拓扑（所有时间点相同）
+fprintf('   构建统一的基础拓扑（所有时间点相同）...\n');
+% 使用第一个时间点的位置数据来构建拓扑结构（但实际连接关系适用于所有时间点）
+reference_positions = sat_positions{1};
+base_graph_matrix = build_topology_with_selected_offsets(reference_positions, sat_mapping, selected_global_offsets, T, P, S, h, Re);
+
+plotSatelliteTopology(base_graph_matrix, T, P, S, base_graph_matrix, high_risk_satellites, current_time);
+
 
 %% 3. 1000次蒙特卡洛模拟计算平均指标
 fprintf('3. 执行1000次蒙特卡洛模拟计算平均指标...\n');
@@ -54,9 +71,6 @@ for t_idx = 1:max_time_points
     current_positions = sat_positions{t_idx};
     current_sat_lat_lon = sat_lat_lon{t_idx};
     current_sun_vector = sunUnitVector(t_idx, :);
-    
-    % 获取基础拓扑
-    base_graph_matrix = base_topology_sequence{t_idx};
     
     % 初始化累计值
     total_avg_hops = 0;
