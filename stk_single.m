@@ -58,7 +58,7 @@ for t_idx = 1:max_time_points
     topology_sequence{t_idx} = graph_matrix;
 
 %     if ~isequal(graph_matrix, prev_graph) % 矩阵内容不同 → 触发绘图
-%         plotSatelliteTopology(graph_matrix, T, P, S, full_graph_matrix, high_risk_satellites, current_time);% 画卫星星座拓扑图
+         plotSatelliteTopology(graph_matrix, T, P, S, full_graph_matrix, high_risk_satellites, current_time);% 画卫星星座拓扑图
 %         prev_graph = graph_matrix; % 更新历史矩阵为当前矩阵
 %     end
     

@@ -1,0 +1,221 @@
+%% 高风险区域卫星子图分析
+clear; clc; close all;
+
+%% 1. 加载预处理数据
+fprintf('=== 高风险区域卫星子图分析 ===\n');
+fprintf('1. 加载预处理数据...\n');
+
+if ~exist('processed_data.mat', 'file')
+    error('错误: processed_data.mat 文件不存在！请先运行 data_preprocessing.m');
+end
+
+% 直接加载所有变量
+load('processed_data.mat');
+
+fprintf('   成功加载预处理数据\n');
+fprintf('   星座参数: %d/%d/%d, 高度=%dkm, FOV=%.1f°, SEU概率=%.4f, 碎片概率=%.4f\n', T, P, S, h, fov_degrees, seu_probability, debris_probability);
+fprintf('   时间点数量: %d\n', num_time_points);
+
+%% 2. 选择时间点（默认为0，即第一个时间点）
+time_point_idx = 5; % MATLAB索引从1开始，对应时间点0
+fprintf('2. 选择时间点 %d (索引 %d)...\n', time_data(time_point_idx), time_point_idx);
+
+%% 3. 基于几何位置的拓扑构建（使用全局公共可建链）
+fprintf('3. 基于几何位置的拓扑构建（全局公共可建链）...\n');
+
+% 提取当前时间点的位置数据
+current_positions = sat_positions{time_point_idx};
+current_sat_lat_lon = sat_lat_lon{time_point_idx};
+
+% 计算异轨可建链候选（仅当前时间点）
+fprintf('   计算当前时间点的异轨可建链候选...\n');
+inter_orbit_candidates = calculate_inter_orbit_candidates_all_times({current_positions}, {sat_mapping}, T, P, S, h, Re);
+
+% 计算当前时间点的公共可建链
+fprintf('   计算当前时间点的公共可建链...\n');
+orbit_public_acs = calculate_global_orbit_public_acs(inter_orbit_candidates, S, P, 1);
+
+% 生成按sum_mod索引的offset组合
+fprintf('   生成按sum_mod索引的offset组合...\n');
+offset_combinations_indexed = generate_global_offset_combinations_indexed(orbit_public_acs, S, P);
+
+%% 4. 使用select_optimal_offsets_for_high_risk函数选择每种U值的最优建链方案
+fprintf('4. 为每个U值选择高风险区域内路径跳数最优的建链方案...\n');
+[optimal_offsets, avg_hops_results] = select_optimal_offsets_for_high_risk(offset_combinations_indexed, current_positions, sat_mapping, current_sat_lat_lon, T, P, S, h, Re);
+
+% 选择特定U值的最优方案（例如U = S/2）
+target_U = 5;
+selected_offsets = optimal_offsets(target_U + 1, :);
+fprintf('   选择U = %d 的最优建链方案: [%s]\n', target_U-1, mat2str(selected_offsets));
+
+% 构建基础拓扑
+fprintf('   构建基础拓扑...\n');
+base_graph_matrix = build_topology_with_selected_offsets(current_positions, sat_mapping, selected_offsets, T, P, S, h, Re);
+
+%% 5. 识别高风险区域内的卫星
+fprintf('5. 识别高风险区域内的卫星...\n');
+
+% 定义高风险区域边界
+lat_min = -55;   % 南纬55°
+lat_max = 15;    % 北纬15°
+lon_min = -90;   % 西经90°
+lon_max = 15;    % 东经15°
+
+% 识别高风险区域内的卫星
+high_risk_satellites = false(T, 1);
+for i = 1:T
+    lat = current_sat_lat_lon(i, 1);
+    lon = current_sat_lat_lon(i, 2);
+    
+    % 检查是否在高风险区域内
+    in_latitude_zone = (lat >= lat_min) && (lat <= lat_max);
+    in_longitude_zone = (lon >= lon_min) && (lon <= lon_max);
+    
+    if in_latitude_zone && in_longitude_zone
+        high_risk_satellites(i) = true;
+    end
+end
+
+num_high_risk = sum(high_risk_satellites);
+fprintf('   高风险区域内的卫星数量: %d\n', num_high_risk);
+
+if num_high_risk == 0
+    fprintf('   警告: 没有卫星位于高风险区域内，无法进行子图分析。\n');
+    return;
+end
+
+%% 6. 构建高风险区域卫星及其两跳邻居的子图
+fprintf('6. 构建高风险区域卫星及其两跳邻居的子图...\n');
+
+% 第一跳：高风险区域卫星的直接邻居
+first_hop_neighbors = false(T, 1);
+for i = 1:T
+    if high_risk_satellites(i)
+        % 找到所有与高风险卫星直接连接的邻居
+        neighbors = find(base_graph_matrix(i, :) == 1);
+        first_hop_neighbors(neighbors) = true;
+    end
+end
+
+% 第二跳：第一跳邻居的邻居（但不包括已经包含的节点）
+second_hop_neighbors = false(T, 1);
+all_first_hop = high_risk_satellites | first_hop_neighbors;
+for i = 1:T
+    if first_hop_neighbors(i)
+        neighbors = find(base_graph_matrix(i, :) == 1);
+        for j = neighbors
+            if ~all_first_hop(j)
+                second_hop_neighbors(j) = true;
+            end
+        end
+    end
+end
+
+% 构建子图节点集合
+subgraph_nodes = high_risk_satellites | first_hop_neighbors | second_hop_neighbors;
+subgraph_node_indices = find(subgraph_nodes);
+num_subgraph_nodes = length(subgraph_node_indices);
+
+fprintf('   子图节点总数: %d (高风险:%d, 第一跳:%d, 第二跳:%d)\n', ...
+    num_subgraph_nodes, num_high_risk, ...
+    sum(first_hop_neighbors & ~high_risk_satellites), ...
+    sum(second_hop_neighbors));
+
+%% 7. 提取子图邻接矩阵
+subgraph_matrix = base_graph_matrix(subgraph_node_indices, subgraph_node_indices);
+
+%% 8. 计算高风险区域内卫星间的平均路径跳数（仅考虑高风险区域内部）
+fprintf('7. 计算高风险区域内卫星间的平均路径跳数...\n');
+
+% 在子图中找到高风险区域卫星的映射索引
+high_risk_in_subgraph = false(num_subgraph_nodes, 1);
+for i = 1:num_subgraph_nodes
+    original_idx = subgraph_node_indices(i);
+    if high_risk_satellites(original_idx)
+        high_risk_in_subgraph(i) = true;
+    end
+end
+
+% 使用Dijkstra算法计算高风险区域内卫星间的最短路径
+high_risk_indices = find(high_risk_in_subgraph);
+num_high_risk_sub = length(high_risk_indices);
+
+if num_high_risk_sub <= 1
+    avg_hops_high_risk = 0;
+    fprintf('   高风险区域内卫星数量 <= 1，平均跳数为 0\n');
+else
+    all_distances = [];
+    diameter = 0;
+    
+    for i = 1:num_high_risk_sub
+        source_idx = high_risk_indices(i);
+        
+        % Dijkstra算法
+        dist = ones(1, num_subgraph_nodes) * inf;
+        dist(source_idx) = 0;
+        visited = false(1, num_subgraph_nodes);
+        
+        while ~all(visited)
+            unvisited = find(~visited);
+            if isempty(unvisited)
+                break;
+            end
+            
+            [min_dist, idx] = min(dist(unvisited));
+            current = unvisited(idx);
+            
+            if min_dist == inf
+                break;
+            end
+            visited(current) = true;
+            
+            % 松弛操作
+            neighbors = find(subgraph_matrix(current, :) > 0);
+            for j = neighbors
+                if ~visited(j) && (dist(current) + 1 < dist(j))
+                    dist(j) = dist(current) + 1;
+                    if dist(j) > diameter
+                        diameter = dist(j);
+                    end
+                end
+            end
+        end
+        
+        % 收集到其他高风险卫星的距离
+        for j = 1:num_high_risk_sub
+            if i ~= j
+                target_idx = high_risk_indices(j);
+                if dist(target_idx) < inf
+                    all_distances = [all_distances, dist(target_idx)];
+                end
+            end
+        end
+    end
+    
+    if ~isempty(all_distances)
+        avg_hops_high_risk = mean(all_distances);
+        fprintf('   高风险区域内平均路径跳数: %.4f, 直径: %d\n', avg_hops_high_risk, diameter);
+    else
+        avg_hops_high_risk = inf;
+        fprintf('   高风险区域内卫星间无连通路径\n');
+    end
+end
+
+%% 9. 绘制子图
+fprintf('8. 绘制高风险区域子图...\n');
+
+% 创建子图的卫星映射信息
+subgraph_mapping = struct();
+subgraph_mapping.orbit = zeros(num_subgraph_nodes, 1);
+subgraph_mapping.sat_in_orbit = zeros(num_subgraph_nodes, 1);
+
+for i = 1:num_subgraph_nodes
+    original_idx = subgraph_node_indices(i);
+    subgraph_mapping.orbit(i) = sat_mapping(original_idx).orbit;
+    subgraph_mapping.sat_in_orbit(i) = sat_mapping(original_idx).sat_in_orbit;
+end
+
+% 调用绘图函数
+plot_high_risk_subgraph(subgraph_matrix, subgraph_mapping, high_risk_in_subgraph, time_data(time_point_idx), P, S);
+
+fprintf('\n高风险区域子图分析完成！\n');

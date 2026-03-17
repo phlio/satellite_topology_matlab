@@ -94,9 +94,9 @@ function graph_matrix = build_topology_with_selected_offsets(positions, mapping,
     end
     
     %% 3. 拓扑验证与统计
-    total_edges = nnz(graph_matrix) / 2;
-    node_degrees = sum(graph_matrix, 2);
-    avg_degree = mean(node_degrees);
-    
-    fprintf('      拓扑统计: 总边数=%d, 平均度数=%.2f\n', total_edges, avg_degree);
+%     total_edges = nnz(graph_matrix) / 2;
+%     node_degrees = sum(graph_matrix, 2);
+%     avg_degree = mean(node_degrees);
+%     
+%     fprintf('      拓扑统计: 总边数=%d, 平均度数=%.2f\n', total_edges, avg_degree);
 end
