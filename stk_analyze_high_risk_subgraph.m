@@ -124,10 +124,20 @@ fprintf('   子图节点总数: %d (高风险:%d, 第一跳:%d, 第二跳:%d)\n'
 %% 7. 提取子图邻接矩阵
 subgraph_matrix = base_graph_matrix(subgraph_node_indices, subgraph_node_indices);
 
-%% 8. 计算高风险区域内卫星间的平均路径跳数（仅考虑高风险区域内部）
-fprintf('7. 计算高风险区域内卫星间的平均路径跳数...\n');
+% 创建子图的卫星映射信息和经纬度信息
+subgraph_mapping = struct();
+subgraph_mapping.orbit = zeros(num_subgraph_nodes, 1);
+subgraph_mapping.sat_in_orbit = zeros(num_subgraph_nodes, 1);
+subgraph_lat_lon = zeros(num_subgraph_nodes, 2);
 
-% 在子图中找到高风险区域卫星的映射索引
+for i = 1:num_subgraph_nodes
+    original_idx = subgraph_node_indices(i);
+    subgraph_mapping.orbit(i) = sat_mapping(original_idx).orbit;
+    subgraph_mapping.sat_in_orbit(i) = sat_mapping(original_idx).sat_in_orbit;
+    subgraph_lat_lon(i, :) = current_sat_lat_lon(original_idx, :);
+end
+
+% 创建子图中的高风险卫星标识
 high_risk_in_subgraph = false(num_subgraph_nodes, 1);
 for i = 1:num_subgraph_nodes
     original_idx = subgraph_node_indices(i);
@@ -136,86 +146,34 @@ for i = 1:num_subgraph_nodes
     end
 end
 
-% 使用Dijkstra算法计算高风险区域内卫星间的最短路径
-high_risk_indices = find(high_risk_in_subgraph);
-num_high_risk_sub = length(high_risk_indices);
+%% 8. 对子图添加断链影响
+fprintf('7. 对子图添加高风险区域断链影响...\n');
+subgraph_matrix_with_failure = apply_high_risk_link_failure_effect(subgraph_matrix, subgraph_lat_lon, high_risk_in_subgraph);
 
-if num_high_risk_sub <= 1
-    avg_hops_high_risk = 0;
-    fprintf('   高风险区域内卫星数量 <= 1，平均跳数为 0\n');
+%% 9. 计算断链影响前后的高风险区域内平均路径跳数
+fprintf('8. 计算断链影响前后的高风险区域内平均路径跳数...\n');
+
+% 计算断链前的平均路径跳数
+[avg_hops_before, diameter_before] = calculate_high_risk_avg_hops(subgraph_matrix, high_risk_in_subgraph);
+fprintf('   断链前 - 高风险区域内平均路径跳数: %.4f, 直径: %d\n', avg_hops_before, diameter_before);
+
+% 计算断链后的平均路径跳数
+[avg_hops_after, diameter_after] = calculate_high_risk_avg_hops(subgraph_matrix_with_failure, high_risk_in_subgraph);
+if isinf(avg_hops_after)
+    fprintf('   断链后 - 高风险区域内卫星间无连通路径\n');
 else
-    all_distances = [];
-    diameter = 0;
-    
-    for i = 1:num_high_risk_sub
-        source_idx = high_risk_indices(i);
-        
-        % Dijkstra算法
-        dist = ones(1, num_subgraph_nodes) * inf;
-        dist(source_idx) = 0;
-        visited = false(1, num_subgraph_nodes);
-        
-        while ~all(visited)
-            unvisited = find(~visited);
-            if isempty(unvisited)
-                break;
-            end
-            
-            [min_dist, idx] = min(dist(unvisited));
-            current = unvisited(idx);
-            
-            if min_dist == inf
-                break;
-            end
-            visited(current) = true;
-            
-            % 松弛操作
-            neighbors = find(subgraph_matrix(current, :) > 0);
-            for j = neighbors
-                if ~visited(j) && (dist(current) + 1 < dist(j))
-                    dist(j) = dist(current) + 1;
-                    if dist(j) > diameter
-                        diameter = dist(j);
-                    end
-                end
-            end
-        end
-        
-        % 收集到其他高风险卫星的距离
-        for j = 1:num_high_risk_sub
-            if i ~= j
-                target_idx = high_risk_indices(j);
-                if dist(target_idx) < inf
-                    all_distances = [all_distances, dist(target_idx)];
-                end
-            end
-        end
-    end
-    
-    if ~isempty(all_distances)
-        avg_hops_high_risk = mean(all_distances);
-        fprintf('   高风险区域内平均路径跳数: %.4f, 直径: %d\n', avg_hops_high_risk, diameter);
-    else
-        avg_hops_high_risk = inf;
-        fprintf('   高风险区域内卫星间无连通路径\n');
-    end
+    fprintf('   断链后 - 高风险区域内平均路径跳数: %.4f, 直径: %d\n', avg_hops_after, diameter_after);
 end
 
-%% 9. 绘制子图
-fprintf('8. 绘制高风险区域子图...\n');
+%% 10. 绘制子图（断链前和断链后）
+fprintf('9. 绘制高风险区域子图...\n');
 
-% 创建子图的卫星映射信息
-subgraph_mapping = struct();
-subgraph_mapping.orbit = zeros(num_subgraph_nodes, 1);
-subgraph_mapping.sat_in_orbit = zeros(num_subgraph_nodes, 1);
-
-for i = 1:num_subgraph_nodes
-    original_idx = subgraph_node_indices(i);
-    subgraph_mapping.orbit(i) = sat_mapping(original_idx).orbit;
-    subgraph_mapping.sat_in_orbit(i) = sat_mapping(original_idx).sat_in_orbit;
-end
-
-% 调用绘图函数
+% 绘制断链前的子图
 plot_high_risk_subgraph(subgraph_matrix, subgraph_mapping, high_risk_in_subgraph, time_data(time_point_idx), P, S);
+title(sprintf('高风险区域子图 - 时间点 %d (断链前)', time_data(time_point_idx)));
+
+% 绘制断链后的子图（显示断开的链路）
+plot_high_risk_subgraph_with_failures(subgraph_matrix_with_failure, subgraph_matrix, subgraph_mapping, high_risk_in_subgraph, time_data(time_point_idx), P, S);
+title(sprintf('高风险区域子图 - 时间点 %d (断链后)', time_data(time_point_idx)));
 
 fprintf('\n高风险区域子图分析完成！\n');

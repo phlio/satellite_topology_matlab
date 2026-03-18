@@ -79,7 +79,7 @@ function plot_high_risk_subgraph(graph_matrix, mapping, high_risk_satellites, ti
                     arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
                     arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
                     % 绘制弧线
-                    plot(arc_x, arc_y, '-', 'Color', 'cyan', 'LineWidth', 0.8);
+                    plot(arc_x, arc_y, '-', 'Color', 'b', 'LineWidth', 0.8);
                    
                 % 情况2：同轨道内首尾卫星 → 竖直下凸弧线
                 elseif (orbit_i == orbit_j) && ((sat_idx_i==1 && sat_idx_j==sat_per_orbit) || (sat_idx_i==sat_per_orbit && sat_idx_j==1))
@@ -97,11 +97,11 @@ function plot_high_risk_subgraph(graph_matrix, mapping, high_risk_satellites, ti
                     arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
                     arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
                     % 绘制弧线
-                    plot(arc_x, arc_y, '-', 'Color', 'cyan', 'LineWidth', 0.8);
+                    plot(arc_x, arc_y, '-', 'Color', 'b', 'LineWidth', 0.8);
                     
                 % 情况3：其他链路 → 直线
                 else
-                    plot([x1, x2], [y1, y2], '-', 'Color', 'cyan', 'LineWidth', 0.8);
+                    plot([x1, x2], [y1, y2], '-', 'Color', 'b', 'LineWidth', 0.8);
                 end
             end
         end

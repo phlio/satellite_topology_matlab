@@ -1,21 +1,38 @@
-function avg_hops = calculate_high_risk_avg_hops(graph_matrix, high_risk_satellites)
-% 计算高风险区域内卫星间的平均路径跳数
+function [avg_hops, diameter] = calculate_high_risk_avg_hops(graph_matrix, high_risk_satellites)
+% 计算高风险区域内卫星间的平均路径跳数和网络直径
+%
 % 输入:
-%   graph_matrix - 完整拓扑邻接矩阵 (T x T)
-%   high_risk_satellites - 高风险卫星标记向量 (T x 1)
+%   graph_matrix - 卫星连接关系的对称矩阵 (T x T)
+%   high_risk_satellites - 高风险区域内的卫星标识向量 (T x 1)
+%
 % 输出:
 %   avg_hops - 高风险区域内卫星间的平均路径跳数
+%   diameter - 高风险区域子图的网络直径
 
+    % 获取卫星总数
     T = size(graph_matrix, 1);
+    
+    % 检查输入有效性
+    if length(high_risk_satellites) ~= T
+        error('high_risk_satellites向量长度与图矩阵维度不匹配');
+    end
+    
+    % 找到高风险区域内的卫星索引
     high_risk_indices = find(high_risk_satellites);
     num_high_risk = length(high_risk_indices);
     
-    if num_high_risk <= 1
+    % 处理特殊情况
+    if num_high_risk == 0
         avg_hops = 0;
+        diameter = 0;
+        return;
+    elseif num_high_risk == 1
+        avg_hops = 0;
+        diameter = 0;
         return;
     end
     
-    % 使用Dijkstra算法计算所有高风险卫星对之间的最短路径
+    % 使用Dijkstra算法计算高风险区域内卫星间的最短路径
     all_distances = [];
     diameter = 0;
     
@@ -67,6 +84,7 @@ function avg_hops = calculate_high_risk_avg_hops(graph_matrix, high_risk_satelli
     if ~isempty(all_distances)
         avg_hops = mean(all_distances);
     else
-        avg_hops = inf; % 无连通路径
+        avg_hops = inf;
+        diameter = inf;
     end
 end

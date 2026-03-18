@@ -53,7 +53,7 @@ fprintf('   构建统一的基础拓扑（所有时间点相同）...\n');
 reference_positions = sat_positions{1};
 base_graph_matrix = build_topology_with_selected_offsets(reference_positions, sat_mapping, selected_global_offsets, T, P, S, h, Re);
 
-plotSatelliteTopology(base_graph_matrix, T, P, S, base_graph_matrix, high_risk_satellites, current_time);
+plotSatelliteTopology(base_graph_matrix, T, P, S, [], high_risk_satellites, current_time);
 
 
 %% 3. 1000次蒙特卡洛模拟计算平均指标
