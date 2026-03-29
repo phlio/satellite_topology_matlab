@@ -1,8 +1,9 @@
-function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_graph_matrix, mapping, high_risk_satellites, time_point, orbit_count, sat_per_orbit)
-% 绘制高风险区域子图（包含断链显示）
+function plot_high_risk_subgraph_with_reconnect(reconnected_graph_matrix, before_reconnect_matrix, original_graph_matrix, mapping, high_risk_satellites, time_point, orbit_count, sat_per_orbit)
+% 绘制高风险区域子图（包含重新建链显示，不显示断链）
 % 输入:
-%   current_graph_matrix - 当前（可能已断链）的子图邻接矩阵
-%   original_graph_matrix - 原始（未断链）的子图邻接矩阵
+%   reconnected_graph_matrix - 重新建链后的子图邻接矩阵
+%   before_reconnect_matrix - 重新建链前的子图邻接矩阵（断链后）
+%   original_graph_matrix - 原始（未断链）的子图邻接矩阵（可选，用于兼容性）
 %   mapping - 卫星映射结构体
 %   high_risk_satellites - 高风险卫星标记向量
 %   time_point - 当前时间点
@@ -13,7 +14,7 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
     figure_name = sprintf('SAA区域子图拓扑 - 时间点 %d', time_point);
 
     %% 计算卫星坐标+编号
-    node_count = size(current_graph_matrix, 1);
+    node_count = size(reconnected_graph_matrix, 1);
     x_coords = zeros(node_count, 1);  % 轨道x坐标（1-P）
     y_coords = zeros(node_count, 1);  % 轨道内y坐标（1-S）
     node_labels = cell(node_count, 1);% 编号（轨道号+卫星号）
@@ -49,12 +50,12 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
             'FontSize', 8, 'FontWeight', 'bold');
     end
 
-    % 2. 绘制断链（红色虚线）- 仅当提供了原始拓扑时
-    if ~isempty(original_graph_matrix) && size(original_graph_matrix, 1) == node_count
+    % 2. 绘制重新建立的链路（绿色实线）
+    if ~isempty(before_reconnect_matrix) && size(before_reconnect_matrix, 1) == node_count
         for i = 1:node_count
             for j = i+1:node_count  % 仅画i<j避免重复
-                % 如果原始拓扑中有连接，但当前拓扑中没有，则显示为断链
-                if original_graph_matrix(i, j) == 1 && current_graph_matrix(i, j) == 0
+                % 如果重新建链后有连接，但重新建链前没有，则显示为新建立的链路
+                if reconnected_graph_matrix(i, j) == 1 && before_reconnect_matrix(i, j) == 0
                     % 获取两个节点的轨道号
                     orbit_i = mapping.orbit(i);
                     orbit_j = mapping.orbit(j);
@@ -64,7 +65,7 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
                     x1 = x_coords(i); y1 = y_coords(i);
                     x2 = x_coords(j); y2 = y_coords(j);
 
-                    % 情况1：第一轨↔最后一轨 → 弧线+红色虚线
+                    % 情况1：第一轨↔最后一轨 → 弧线+绿色实线
                     if (orbit_i==1 && orbit_j==orbit_count) || (orbit_i==orbit_count && orbit_j==1)
                         % 生成上凸弧线的参数点（避免与中间轨道重叠）
                         arc_num = 60; % 弧线采样点数（越多越平滑）
@@ -81,10 +82,10 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
                         % 3. 计算贝塞尔曲线坐标（保证起点/终点精准连接）
                         arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
                         arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
-                        % 绘制弧线（红色虚线）
-                        plot(arc_x, arc_y, '--', 'Color', 'red', 'LineWidth', 1.2);
-                       
-                    % 情况2：同轨道内首尾卫星（1号↔S号）→ 竖直下凸弧线+红色虚线
+                        % 绘制弧线（绿色实线）
+                        plot(arc_x, arc_y, '-', 'Color', 'green', 'LineWidth', 1.5);
+                   
+                    % 情况2：同轨道内首尾卫星（1号↔S号）→ 竖直下凸弧线+绿色实线
                     elseif (orbit_i == orbit_j) && ((sat_idx_i==1 && sat_idx_j==sat_per_orbit) || (sat_idx_i==sat_per_orbit && sat_idx_j==1))
                         arc_num = 60; % 弧线采样点数（越多越平滑）
                         h = 0.5; % 上凸高度（可自定义，比如2、3等）
@@ -99,22 +100,23 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
                         % 3. 计算贝塞尔曲线坐标（保证起点/终点精准连接）
                         arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
                         arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
-                        % 4. 绘制弧线（红色虚线）
-                        plot(arc_x, arc_y, '--', 'Color', 'red', 'LineWidth', 1.2);
+                        % 4. 绘制弧线（绿色实线）
+                        plot(arc_x, arc_y, '-', 'Color', 'green', 'LineWidth', 1.5);
                         
-                    % 情况3：其他链路 → 直线+红色虚线
+                    % 情况3：其他链路 → 直线+绿色实线
                     else
-                        plot([x1, x2], [y1, y2], '--', 'Color', 'red', 'LineWidth', 1.2);
+                        plot([x1, x2], [y1, y2], '-', 'Color', 'green', 'LineWidth', 1.5);
                     end
                 end
             end
         end
     end
 
-    % 3. 绘制现有链路（核心：区分1-P轨弧线+虚线，其他直线+实线）
+    % 3. 绘制现有链路（蓝色实线，不包括新建立的链路）
     for i = 1:node_count
         for j = i+1:node_count  % 仅画i<j避免重复
-            if current_graph_matrix(i, j) == 1
+            if reconnected_graph_matrix(i, j) == 1 && ...
+               (isempty(before_reconnect_matrix) || before_reconnect_matrix(i, j) == 1)
                 % 获取两个节点的轨道号
                 orbit_i = mapping.orbit(i);
                 orbit_j = mapping.orbit(j);
@@ -124,7 +126,7 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
                 x1 = x_coords(i); y1 = y_coords(i);
                 x2 = x_coords(j); y2 = y_coords(j);
 
-                % 情况1：第一轨↔最后一轨 → 弧线+虚线
+                % 情况1：第一轨↔最后一轨 → 弧线+蓝色实线
                 if (orbit_i==1 && orbit_j==orbit_count) || (orbit_i==orbit_count && orbit_j==1)
                     % 生成上凸弧线的参数点（避免与中间轨道重叠）
                     arc_num = 60; % 弧线采样点数（越多越平滑）
@@ -141,10 +143,10 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
                     % 3. 计算贝塞尔曲线坐标（保证起点/终点精准连接）
                     arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
                     arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
-                    % 绘制弧线（虚线）
+                    % 绘制弧线（蓝色实线）
                     plot(arc_x, arc_y, '-', 'Color', 'b', 'LineWidth', 0.8);
                    
-                % 情况2：同轨道内首尾卫星（1号↔S号）→ 竖直下凸弧线+虚线
+                % 情况2：同轨道内首尾卫星（1号↔S号）→ 竖直下凸弧线+蓝色实线
                 elseif (orbit_i == orbit_j) && ((sat_idx_i==1 && sat_idx_j==sat_per_orbit) || (sat_idx_i==sat_per_orbit && sat_idx_j==1))
                     arc_num = 60; % 弧线采样点数（越多越平滑）
                     h = 0.5; % 上凸高度（可自定义，比如2、3等）
@@ -159,10 +161,10 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
                     % 3. 计算贝塞尔曲线坐标（保证起点/终点精准连接）
                     arc_x = (1-t).^2 .* P0(1) + 2*(1-t).*t .* P1(1) + t.^2 .* P2(1);
                     arc_y = (1-t).^2 .* P0(2) + 2*(1-t).*t .* P1(2) + t.^2 .* P2(2);
-                    % 4. 绘制弧线（颜色/线宽可自定义）
+                    % 4. 绘制弧线（蓝色实线）
                     plot(arc_x, arc_y, '-', 'Color', 'b', 'LineWidth', 0.8);
                     
-                % 情况3：其他链路 → 直线+实线
+                % 情况3：其他链路 → 直线+蓝色实线
                 else
                     plot([x1, x2], [y1, y2], '-', 'Color', 'b', 'LineWidth', 0.8);
                 end
@@ -188,8 +190,8 @@ function plot_high_risk_subgraph_with_failures(current_graph_matrix, original_gr
               'MarkerEdgeColor', 'black', 'LineWidth', 1.5);
     h2 = plot(-10, -10, 'o', 'MarkerSize', 20, 'MarkerFaceColor', 'red', ...
               'MarkerEdgeColor', 'black', 'LineWidth', 1.5);
-    h3 = plot(-10, -10, '--', 'Color', 'red', 'LineWidth', 1.2);
-    legend([h1, h2, h3], {'普通卫星', 'SAA区域卫星', '断开链路'}, 'Location', 'northeastoutside');
+    h3 = plot(-10, -10, '-', 'Color', 'green', 'LineWidth', 1.5);
+    legend([h1, h2, h3], {'普通卫星', 'SAA区域卫星', '重新建立链路'}, 'Location', 'northeastoutside');
     
     hold off;
 end

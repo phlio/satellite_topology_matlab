@@ -9,7 +9,7 @@ function plot_high_risk_subgraph(graph_matrix, mapping, high_risk_satellites, ti
 %   sat_per_orbit - 每轨道卫星数
 
     time_point_str = sprintf(' (时间点: %d)', time_point);
-    figure_name = sprintf('高风险区域子图拓扑 - 时间点 %d', time_point);
+    figure_name = sprintf('SAA区域子图拓扑 - 时间点 %d', time_point);
 
     %% 计算卫星坐标+编号
     node_count = size(graph_matrix, 1);
@@ -111,9 +111,9 @@ function plot_high_risk_subgraph(graph_matrix, mapping, high_risk_satellites, ti
     xlabel('轨道编号', 'FontSize', 10);
     ylabel('轨道内卫星编号', 'FontSize', 10);
     if isempty(time_point_str)
-        title('高风险区域子图拓扑', 'FontSize', 12);
+        title('SAA区域子图拓扑', 'FontSize', 12);
     else
-        title(['高风险区域子图拓扑' time_point_str], 'FontSize', 12);
+        title(['SAA区域子图拓扑' time_point_str], 'FontSize', 12);
     end
     xticks(1:orbit_count);
     yticks(1:sat_per_orbit);
@@ -125,7 +125,7 @@ function plot_high_risk_subgraph(graph_matrix, mapping, high_risk_satellites, ti
               'MarkerEdgeColor', 'black', 'LineWidth', 1.5);
     h2 = plot(-10, -10, 'o', 'MarkerSize', 20, 'MarkerFaceColor', 'red', ...
               'MarkerEdgeColor', 'black', 'LineWidth', 1.5);
-    legend([h1, h2], {'普通卫星', '高风险卫星'}, 'Location', 'northeastoutside');
+    legend([h1, h2], {'普通卫星', 'SAA区域卫星'}, 'Location', 'northeastoutside');
     
     hold off;
 end

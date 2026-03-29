@@ -165,15 +165,45 @@ else
     fprintf('   断链后 - 高风险区域内平均路径跳数: %.4f, 直径: %d\n', avg_hops_after, diameter_after);
 end
 
-%% 10. 绘制子图（断链前和断链后）
-fprintf('9. 绘制高风险区域子图...\n');
+%% 10. 重新建链优化
+fprintf('9. 执行重新建链优化...\n');
+[subgraph_matrix_reconnected, added_links] = reconnect_high_risk_subgraph(...
+    subgraph_matrix_with_failure, ...
+    current_positions(subgraph_node_indices, :), ...
+    subgraph_mapping, ...
+    high_risk_in_subgraph, ...
+    num_subgraph_nodes, P, S, h, Re);
+
+% 计算重新建链后的平均路径跳数
+[avg_hops_reconnected, diameter_reconnected] = calculate_high_risk_avg_hops(subgraph_matrix_reconnected, high_risk_in_subgraph);
+if isinf(avg_hops_reconnected)
+    fprintf('   重新建链后 - 高风险区域内卫星间仍无连通路径\n');
+else
+    fprintf('   重新建链后 - 高风险区域内平均路径跳数: %.4f, 直径: %d\n', avg_hops_reconnected, diameter_reconnected);
+    improvement = avg_hops_after - avg_hops_reconnected;
+    if improvement > 0
+        fprintf('   重新建链效果: 平均路径跳数减少 %.4f\n', improvement);
+    else
+        fprintf('   重新建链效果: 无显著改进\n');
+    end
+end
+
+%% 11. 绘制子图（断链前、断链后和重新建链后）
+fprintf('10. 绘制高风险区域子图...\n');
 
 % 绘制断链前的子图
 plot_high_risk_subgraph(subgraph_matrix, subgraph_mapping, high_risk_in_subgraph, time_data(time_point_idx), P, S);
-title(sprintf('高风险区域子图 - 时间点 %d (断链前)', time_data(time_point_idx)));
+title(sprintf('SAA区域子图 - 时间点 %d (断链前)', time_data(time_point_idx)));
 
 % 绘制断链后的子图（显示断开的链路）
 plot_high_risk_subgraph_with_failures(subgraph_matrix_with_failure, subgraph_matrix, subgraph_mapping, high_risk_in_subgraph, time_data(time_point_idx), P, S);
-title(sprintf('高风险区域子图 - 时间点 %d (断链后)', time_data(time_point_idx)));
+title(sprintf('SSA区域子图 - 时间点 %d (断链后)', time_data(time_point_idx)));
+
+% 绘制重新建链后的子图
+if ~isempty(added_links)
+    plot_high_risk_subgraph_with_reconnect(subgraph_matrix_reconnected, subgraph_matrix_with_failure, subgraph_matrix, subgraph_mapping, high_risk_in_subgraph, time_data(time_point_idx), P, S);
+    title(sprintf('SAA区域子图 - 时间点 %d (重新建链后)', time_data(time_point_idx)));
+    fprintf('   已绘制重新建链后的子图\n');
+end
 
 fprintf('\n高风险区域子图分析完成！\n');
