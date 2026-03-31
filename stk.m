@@ -1,9 +1,13 @@
-%% STK Walker星座拓扑分析
+%% STK Walker 星座拓扑分析
 clear; clc; close all;
 
+%% 添加 src 函数路径
+addpath(fullfile(pwd, 'src'));
+
 %% 参数设置
-filename = '60location_latitude_longitude.csv';
-sun_vector_filename = '60Satellite101_Sun_Vector_J2000.csv';
+data_dir = fullfile(pwd, 'data');
+filename = fullfile(data_dir, '60location_latitude_longitude.csv');
+sun_vector_filename = fullfile(data_dir, '60Satellite101_Sun_Vector_J2000.csv');
 T = 60; P = 6; S = 10; U = 5;
 % T = 100; P = 10; S = 10; 
 h = 1000; Re = 6378.14; 

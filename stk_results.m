@@ -1,16 +1,21 @@
 %% 可视化已保存的模拟结果
 clear; clc; close all;
 
+%% 添加 src 函数路径
+addpath(fullfile(pwd, 'src'));
+
+data_dir = fullfile(pwd, 'data');
+
 %% 1. 加载保存的计算结果
 fprintf('=== 可视化已保存的模拟结果 ===\n');
 fprintf('1. 加载保存的计算结果...\n');
 
-if ~exist('simulation_results60u5.mat', 'file')
+if ~exist(fullfile(data_dir, 'simulation_results60u5.mat'), 'file')
     error('错误: simulation_results60u5.mat 文件不存在！请先运行 stk_topology_analysis.m 生成结果文件');
 end
 
 % 加载保存的变量
-load('simulation_results60u5.mat');
+load(fullfile(data_dir, 'simulation_results60u5.mat'));
 
 fprintf('   成功加载计算结果\n');
 % 重新计算 max_time_points，与原始分析中保持一致

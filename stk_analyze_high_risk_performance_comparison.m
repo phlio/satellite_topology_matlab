@@ -1,16 +1,20 @@
 %% 高风险区域性能对比分析 - 蒙特卡洛模拟版本
 clear; clc; close all;
 
+%% 添加 src 函数路径
+addpath(fullfile(pwd, 'src'));
+
 %% 1. 加载预处理数据
 fprintf('=== 高风险区域性能对比分析（蒙特卡洛模拟） ===\n');
 fprintf('1. 加载预处理数据...\n');
 
-if ~exist('processed_data.mat', 'file')
-    error('错误: processed_data.mat 文件不存在！请先运行 data_preprocessing.m');
+data_dir = fullfile(pwd, 'data');
+if ~exist(fullfile(data_dir, 'processed_data.mat'), 'file')
+    error('错误：processed_data.mat 文件不存在！请先运行 data_preprocessing.m');
 end
 
 % 直接加载所有变量
-load('processed_data.mat');
+load(fullfile(data_dir, 'processed_data.mat'));
 
 fprintf('   成功加载预处理数据\n');
 fprintf('   星座参数: %d/%d/%d, 高度=%dkm, FOV=%.1f°, SEU概率=%.4f, 碎片概率=%.4f\n', T, P, S, h, fov_degrees, seu_probability, debris_probability);

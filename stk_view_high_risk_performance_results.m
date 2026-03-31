@@ -1,11 +1,16 @@
 %% 查看高风险区域性能对比分析结果
 clear; clc; close all;
 
+%% 添加 src 函数路径
+addpath(fullfile(pwd, 'src'));
+
+data_dir = fullfile(pwd, 'data');
+
 fprintf('=== 查看高风险区域性能对比分析结果 ===\n');
 
 % 指定要加载的结果文件（可以根据需要修改时间点）
-time_point_idx = 5; % 默认使用第5个时间点的结果
-save_filename = sprintf('high_risk_performance_comparison_time%d.mat', (time_point_idx - 1) * 60);
+time_point_idx = 5; % 默认使用第 5 个时间点的结果
+save_filename = fullfile(data_dir, sprintf('high_risk_performance_comparison_time%d.mat', (time_point_idx - 1) * 60));
 
 if ~exist(save_filename, 'file')
     fprintf('错误: 结果文件 %s 不存在！\n', save_filename);
